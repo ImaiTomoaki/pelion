@@ -25,13 +25,17 @@ container_name = 'azureml-blobstore-54ca3e7c-77ca-4504-bdfc-5431acd78d10'
 #drawed_img_path = 'img//drawed.jpg'
 #location_json_path = 'data//location.json'
 
-def convert_json(json):
-    bef_b64 = json['image1']['base64']
-    bef_name = json['image1']['url'].split("/")[-1]
+def convert_json(js):
+    bef_b64 = js['image1']['base64']
+    bef_name = js['image1']['url'].split("/")[-1]
     bef_image = base64.b64decode(bef_b64)
-    aft_b64 = json['image2']['base64']
-    aft_name = json['image2']['url'].split("/")[-1]
+    bef_image = np.frombuffer(bef_image, dtype=np.uint8)
+    bef_image = cv2.imdecode(bef_image, cv2.IMREAD_COLOR)
+    aft_b64 = js['image2']['base64']
+    aft_name = js['image2']['url'].split("/")[-1]
     aft_image = base64.b64decode(aft_b64)
+    aft_image = np.frombuffer(aft_image, dtype=np.uint8)
+    aft_image = cv2.imdecode(aft_image, cv2.IMREAD_COLOR)
     return bef_image, aft_image, bef_name, aft_name
 
 def save_image(image, blob_name):
@@ -91,32 +95,36 @@ def create_json(rect_list, bef_name, aft_name):
         }
     return jsonData
 
-@app.route('/', methods=['POST'])
+@app.route('/', methods=['GET', 'POST'])
 def process_image():
-    # データの変換処理
-    bef_image, aft_image, bef_name, aft_name = convert_json(request.json)
+    if request.method != "POST":
+        return 'GET METHOD'
     
-    # コンテナーにBLOBファイルを追加
-    save_image(aft_image, aft_name)
-    
-    # 背景差分
-    fgmask = _get_background_subtraction(bef_image, aft_image)
-    
-    # ノイズ除去（オープニング、クロージング）
-    fgmask = noise_filt(fgmask, filt = 3)
-    
-    # 矩形領域の抽出
-    rect_list = create_rect_list(fgmask, ignore_size = 1000)
-    #print(rect_list) #後で削除
-    #cv2.imwrite(drawed_img_path, aft_img) #後で削除
-    
-    # jsonデータの作成
-    jsonData = create_json(rect_list, bef_name, aft_name)
-    #dirc = codecs.open(location_json_path, 'w', 'utf-8') #後で削除
-    #json.dump(jsonData, dirc, ensure_ascii=False) #後で削除
-    
-    # HTTPレスポンスを送信
-    return Response(response=json.dumps(jsonData), status=200)
+    else:
+        try:
+            # データの変換処理
+            bef_image, aft_image, bef_name, aft_name = convert_json(request.json)
+            
+            # コンテナーにBLOBファイルを追加
+            save_image(aft_image, aft_name)
+        
+            # 背景差分
+            fgmask = _get_background_subtraction(bef_image, aft_image)
+            
+            # ノイズ除去（オープニング、クロージング）
+            fgmask = noise_filt(fgmask, filt = 3)
+        
+            # 矩形領域の抽出
+            rect_list = create_rect_list(fgmask, ignore_size = 1000)
+            
+            # jsonデータの作成
+            jsonData = create_json(rect_list, bef_name, aft_name)
+            
+            # HTTPレスポンスを送信
+            return Response(response=json.dumps(jsonData), status=200)
+        
+        except:
+            return 'exception'
     
 if __name__ == "__main__":
     app.run()
