@@ -5,8 +5,6 @@ import json
 import codecs
 import datetime
 import cv2
-import requests
-from PIL import Image
 from azure.storage.blob import BlockBlobService
 import base64
 from flask import Flask, request, Response
