@@ -1,5 +1,3 @@
-codecs
 flask
 opencv-python
 azure-storage-blob==0.37.0
-base64
