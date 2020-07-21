@@ -97,11 +97,12 @@ def create_json(rect_list, bef_name, aft_name):
 
 @app.route('/', methods=['GET', 'POST'])
 def process_image():
-    if request.method != "POST":
-        return 'GET METHOD'
-    
-    else:
-        try:
+    try:
+        
+        if request.method != "POST":
+            return 'GET METHOD'
+        
+        else:
             # データの変換処理
             bef_image, aft_image, bef_name, aft_name = convert_json(request.json)
             
@@ -123,8 +124,18 @@ def process_image():
             # HTTPレスポンスを送信
             return Response(response=json.dumps(jsonData), status=200)
         
-        except:
-            return 'exception'
+    except:
+        return 'exception'
+
+@app.route('/check', methods=['GET', 'POST'])
+def check():
+    try:
+        if request.method != "POST":
+            return 'GET METHOD'    
+        else:
+            return 'POST METHOD'
+    except:
+        return 'exception'
     
 if __name__ == "__main__":
     app.run()
