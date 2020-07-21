@@ -1,9 +1,5 @@
-os
-numpy
-time
-json
 codecs
-datetime
+flask
 opencv-python
 azure-storage-blob==0.37.0
 base64
