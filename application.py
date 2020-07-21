@@ -1,10 +1,14 @@
+
+
 import os
 import numpy as np
-import time
+#import time
 import json
-import codecs
+#import codecs
 import datetime
 import cv2
+#import requests
+#from PIL import Image
 from azure.storage.blob import BlockBlobService
 import base64
 from flask import Flask, request, Response
@@ -14,6 +18,12 @@ app = Flask(__name__)
 account_name = 'moribuildingml7196774142'
 account_key = 'UYOFFAa2/E5q3PBK327lwTUZjqa7plyQ07Jv9TXzYOMU+wte88EU31mwoZ8baspDXTnwBY+UyvwgrK38opQC2Q=='
 container_name = 'azureml-blobstore-54ca3e7c-77ca-4504-bdfc-5431acd78d10'
+#url = 'https://demoapp-test-tzk.azurewebsites.net/'
+#auth = requests.auth.HTTPBasicAuth('tsuzuki', 'denki')
+#after_img_path = 'img//after.jpg'
+#before_img_path = 'img//before.jpg'
+#drawed_img_path = 'img//drawed.jpg'
+#location_json_path = 'data//location.json'
 
 def convert_json(json):
     bef_b64 = json['image1']['base64']
@@ -63,7 +73,6 @@ def create_rect_list(fgmask, ignore_size = 1000):
             continue
         rect = contours[i]
         x, y, w, h = cv2.boundingRect(rect)
-        cv2.rectangle(aft_img, (x, y), (x + w, y + h), (0, 255, 0), 3)
         rect_list.append([x, y, w, h])
     return rect_list
 
@@ -86,24 +95,28 @@ def create_json(rect_list, bef_name, aft_name):
 def process_image():
     # データの変換処理
     bef_image, aft_image, bef_name, aft_name = convert_json(request.json)
-
+    
     # コンテナーにBLOBファイルを追加
     save_image(aft_image, aft_name)
-
+    
     # 背景差分
-    fgmask = _get_background_subtraction(bef_img, aft_img)
-
+    fgmask = _get_background_subtraction(bef_image, aft_image)
+    
     # ノイズ除去（オープニング、クロージング）
     fgmask = noise_filt(fgmask, filt = 3)
     
     # 矩形領域の抽出
     rect_list = create_rect_list(fgmask, ignore_size = 1000)
-            
+    #print(rect_list) #後で削除
+    #cv2.imwrite(drawed_img_path, aft_img) #後で削除
+    
     # jsonデータの作成
     jsonData = create_json(rect_list, bef_name, aft_name)
-
+    #dirc = codecs.open(location_json_path, 'w', 'utf-8') #後で削除
+    #json.dump(jsonData, dirc, ensure_ascii=False) #後で削除
+    
     # HTTPレスポンスを送信
     return Response(response=json.dumps(jsonData), status=200)
-
+    
 if __name__ == "__main__":
     app.run()
