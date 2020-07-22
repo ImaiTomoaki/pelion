@@ -2,13 +2,9 @@
 
 import os
 import numpy as np
-#import time
 import json
-#import codecs
 import datetime
 import cv2
-#import requests
-#from PIL import Image
 from azure.storage.blob import BlockBlobService
 import base64
 from flask import Flask, request, Response
@@ -18,12 +14,6 @@ app = Flask(__name__)
 account_name = 'moribuildingml7196774142'
 account_key = 'UYOFFAa2/E5q3PBK327lwTUZjqa7plyQ07Jv9TXzYOMU+wte88EU31mwoZ8baspDXTnwBY+UyvwgrK38opQC2Q=='
 container_name = 'azureml-blobstore-54ca3e7c-77ca-4504-bdfc-5431acd78d10'
-#url = 'https://demoapp-test-tzk.azurewebsites.net/'
-#auth = requests.auth.HTTPBasicAuth('tsuzuki', 'denki')
-#after_img_path = 'img//after.jpg'
-#before_img_path = 'img//before.jpg'
-#drawed_img_path = 'img//drawed.jpg'
-#location_json_path = 'data//location.json'
 
 def convert_json(js):
     bef_b64 = js['image1']['base64']
@@ -52,8 +42,8 @@ def save_image(image, blob_name):
         )
     os.remove(blob_name)
 
-def _get_background_subtraction(image1, image2):
-    fgbg = cv2.createBackgroundSubtractorMOG2()
+def get_background_subtraction(image1, image2, th = 100):
+    fgbg = cv2.createBackgroundSubtractorMOG2(1, th)
     fgmask = fgbg.apply(image1)
     fgmask = fgbg.apply(image2)
     return fgmask
@@ -95,7 +85,7 @@ def create_json(rect_list, bef_name, aft_name):
         }
     return jsonData
 
-@app.route('/', methods=['GET', 'POST'])
+@app.route('/check', methods=['GET', 'POST'])
 def process_image():
     try:
         
@@ -110,10 +100,10 @@ def process_image():
             save_image(aft_image, aft_name)
         
             # 背景差分
-            fgmask = _get_background_subtraction(bef_image, aft_image)
+            fgmask = get_background_subtraction(bef_image, aft_image, th = 100)
             
             # ノイズ除去（オープニング、クロージング）
-            fgmask = noise_filt(fgmask, filt = 3)
+            fgmask = noise_filt(fgmask, filt = 2)
         
             # 矩形領域の抽出
             rect_list = create_rect_list(fgmask, ignore_size = 1000)
@@ -124,16 +114,6 @@ def process_image():
             # HTTPレスポンスを送信
             return Response(response=json.dumps(jsonData), status=200)
         
-    except:
-        return 'exception'
-
-@app.route('/check', methods=['GET', 'POST'])
-def check():
-    try:
-        if request.method != "POST":
-            return 'GET METHOD'    
-        else:
-            return 'POST METHOD'
     except:
         return 'exception'
     
